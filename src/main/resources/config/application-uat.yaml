@@ -1,0 +1,51 @@
+logging:
+  level:
+    ROOT: INFO
+    org.hibernate: INFO
+
+# ssl configs
+server:
+  port: 65443
+  ssl:
+    enabled: true
+    key-store: '/Users/bishop/Articles/Demo-Projects/certs/keystore-my-application.p12'
+    key-store-password: 'changeit!'
+    key-store-type: PKCS12
+    key-alias: 'ssl'
+
+http:
+  ssl:
+    skip-hostname-verification: true
+
+spring:
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/my_application?useSSL=false&allowPublicKeyRetrieval=true
+    username: bishop
+    password: bishop
+    hikari:
+      poolName: Hikari
+      auto-commit: false
+      maximum-pool-size: 30
+      minimum-idle: 10
+      idle-timeout: 30000  # Close idle connections after 30s
+      connection-timeout: 20000  # Wait max 20s for a connection
+      max-lifetime: 1800000  # Recycle connections every 30 mins
+      # leak-detection-threshold: 15000  # Detect leaked connections after 15s
+      data-source-properties:
+        cachePrepStmts: true
+        prepStmtCacheSize: 500
+        prepStmtCacheSqlLimit: 4096
+        useServerPrepStmts: true
+  jpa:
+    hibernate:
+      dialect: org.hibernate.dialect.MySQL8Dialect  # Update dialect for MySQL 8
+      ddl-auto: update
+    show-sql: false
+
+  jackson:
+    serialization:
+      FAIL_ON_EMPTY_BEANS: false
+urls:
+  transaction: 'https://localhost:8433/api/v1/inbound/transaction'

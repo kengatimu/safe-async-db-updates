@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: application
+  profiles:
+    active: uat
+
+#actuator configs
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    shutdown:
+      enabled: true #for gracefully shutting down the app - http://localhost:<PortNumber>/actuator/shutdown
+    health:
+      show-details: when_authorized
+  info:
+    env:
+      enabled: true

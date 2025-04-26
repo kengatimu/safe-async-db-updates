@@ -64,3 +64,20 @@ mvn clean install
 
 # 4. Run the application
 mvn spring-boot:run
+
+## API Documentation
+
+Once the application is running locally, Swagger UI will automatically be available for API exploration and testing.
+
+- **Swagger UI:**
+  Access the API documentation at: https://localhost:65443/swagger-ui/index.html
+
+- **OpenAPI Spec (raw JSON):**
+  https://localhost:65443/v3/api-docs
+
+Swagger provides a full overview of available endpoints, request/response schemas, and error codes.
+
+**Note:**
+- The application runs over **HTTPS** on **port 65443** locally.
+- You may encounter a browser SSL warning when accessing Swagger locally.
+  This is expected if using a self-signed certificate. Proceed by selecting "Advanced" ➔ "Proceed to localhost".

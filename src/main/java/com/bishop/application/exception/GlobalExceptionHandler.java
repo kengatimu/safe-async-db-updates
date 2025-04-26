@@ -36,11 +36,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<?> handleCustomExceptions(CustomException e, WebRequest request) {
+        String exceptionMessage = e.getMessage();
+        log.info("Complete Exception Message: " + exceptionMessage);
+
         String rrn = (String) request.getAttribute("rrn", WebRequest.SCOPE_REQUEST);
         TransactionType type = (TransactionType) request.getAttribute("type", WebRequest.SCOPE_REQUEST);
 
         // Parse error code and error message from the exception
-        Map<String, String> errorMap = getErrorDesc(e.getMessage());
+        Map<String, String> errorMap = getErrorDesc(exceptionMessage);
         String errorMessage = errorMap.getOrDefault("message", "An unexpected error occurred");
         String httpStatusCode = errorMap.getOrDefault("code", String.valueOf(DEFAULT_HTTP_STATUS_CODE));
 

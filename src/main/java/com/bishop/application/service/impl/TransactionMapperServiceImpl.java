@@ -32,7 +32,7 @@ public class TransactionMapperServiceImpl implements TransactionMapperService {
         transaction.setRrn(request.getRrn());
         transaction.setSenderName(request.getSenderName());
         transaction.setReceiverName(request.getReceiverName());
-        transaction.setAmount(new BigDecimal(request.getAmount()));
+        transaction.setAmount(request.getAmount());
         transaction.setCurrency(request.getCurrency());
         transaction.setChannelId(request.getChannelId());
         transaction.setTransactionType(type);

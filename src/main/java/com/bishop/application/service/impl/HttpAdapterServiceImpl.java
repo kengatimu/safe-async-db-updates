@@ -47,24 +47,32 @@ public class HttpAdapterServiceImpl implements HttpAdapterService {
     public TransactionResponse sendHttpTransactionRequest(TransactionRequest transactionRequest, TransactionType type) throws CustomException {
         String rrn = transactionRequest.getRrn();
         CloseableHttpResponse response = null;
+
         try {
+            // Build HTTP Post Request with necessary headers
             HttpPost httpPost = getPostRequestHeaders(transactionUrl, new StringEntity(gson.toJson(transactionRequest)));
+
+            // Send HTTP request
             log.info("{}: Sending {} Post HTTP Request Via: {}", rrn, type, transactionUrl);
             response = closeableHttpClient.execute(httpPost);
 
+            // Process the HTTP response
             return httpResponseProcessorService.processTransactionResponse(rrn, response, type);
+
         } catch (CustomException | IOException e) {
-            log.error("{}: Exception Occurred on when sending http request: {}", rrn, e.getMessage());
+            log.error("{}: Exception occurred when sending HTTP request: {}", rrn, e.getMessage());
 
             String errorDescription = e.getMessage();
-            if (errorDescription != null && (
-                    errorDescription.contains("timeout")
+            if (errorDescription != null
+                    && (errorDescription.contains("timeout")
                             || errorDescription.contains("time out")
                             || errorDescription.contains("timed out"))) {
                 throw new CustomException(TIMEOUT_ERROR + e.getMessage());
             }
             throw new CustomException(HTTP_ERROR + e.getMessage());
+
         } finally {
+            // Close the HTTP response to release resources
             if (response != null) {
                 try {
                     response.close();
@@ -75,10 +83,11 @@ public class HttpAdapterServiceImpl implements HttpAdapterService {
         }
     }
 
+    // Helper method to build an HTTP Post Request with headers
     private HttpPost getPostRequestHeaders(String url, StringEntity stringEntity) {
         HttpPost httpPost = new HttpPost(url);
         httpPost.setEntity(stringEntity);
-        httpPost.setHeader("Content-Type", MediaType.APPLICATION_XML_VALUE);
+        httpPost.setHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE);
         return httpPost;
     }
 }

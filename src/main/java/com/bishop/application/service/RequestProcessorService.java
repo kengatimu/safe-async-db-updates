@@ -7,5 +7,5 @@ import com.bishop.application.exception.CustomException;
 import org.springframework.validation.BindingResult;
 
 public interface RequestProcessorService {
-    TransactionResponse processTransactionRequest(TransactionRequest transactionRequest, BindingResult bindingResult, TransactionType type) throws CustomException;
+    TransactionResponse processTransactionRequest(String rrn, TransactionRequest transactionRequest, BindingResult bindingResult, TransactionType type) throws CustomException;
 }

@@ -11,7 +11,6 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -40,32 +39,40 @@ public class TransactionController {
     }
 
     @PostMapping(value = "/transaction",
-            consumes = {MediaType.APPLICATION_JSON_VALUE},
-            produces = {MediaType.APPLICATION_JSON_VALUE})
-    ResponseEntity<?> transaction(@Valid @RequestBody TransactionRequest transactionRequest, BindingResult bindingResult, WebRequest webRequest) throws CustomException {
-        TransactionType type = TransactionType.CREDIT_TRANSFER;
-        String rrn = transactionRequest.getRrn();
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> transaction(@Valid @RequestBody TransactionRequest transactionRequest,
+                                              BindingResult bindingResult,
+                                              WebRequest webRequest) throws CustomException {
+        final TransactionType type = TransactionType.CREDIT_TRANSFER;
+        final String rrn = transactionRequest.getRrn();
 
-        // Store the rrn and type in the WebRequest to be used in the GlobalExceptionHandler class
+        // Store request details in WebRequest for error tracing
         webRequest.setAttribute("rrn", rrn, WebRequest.SCOPE_REQUEST);
         webRequest.setAttribute("type", type, WebRequest.SCOPE_REQUEST);
 
         try {
+            // Log incoming request
             log.info("{}: Received {} Request From Channel: {}", rrn, type, gson.toJson(transactionRequest));
-            TransactionResponse response = requestProcessorService.processTransactionRequest(transactionRequest, bindingResult, type);
 
-            // Update Db status for credit transfer only
+            // Process transaction request
+            TransactionResponse response = requestProcessorService.processTransactionRequest(rrn, transactionRequest, bindingResult, type);
+
+            // Update database asynchronously after processing
             updateDatabaseRecord(rrn, response, type);
 
+            // Log outgoing response
             log.info("{}: Returned {} Response To Channel: {}", rrn, type, gson.toJson(response));
-            return new ResponseEntity<>(gson.toJson(response), HttpStatus.OK);
+
+            return ResponseEntity.ok(gson.toJson(response));
         } catch (Exception e) {
+            // Log and wrap any processing exceptions
             log.error("{}: Exception Occurred During Request Processing: {}", rrn, e.getMessage());
-            throw new CustomException(e.getMessage());
+            throw new CustomException("Failed to process transaction: " + e.getMessage());
         }
     }
 
-    // This will update the database in async (background thread). Therefore, not need for @Transaction annotation
+    // Updates transaction status asynchronously in the database
     private void updateDatabaseRecord(String rrn, TransactionResponse response, TransactionType type) {
         transactionUpdateService.updateDbStatus(rrn, response, type);
     }

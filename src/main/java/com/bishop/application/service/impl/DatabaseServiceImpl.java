@@ -35,6 +35,7 @@ public class DatabaseServiceImpl implements DatabaseService {
         this.transactionDetailsRepository = transactionMasterRepository;
     }
 
+    // Use @Transactional(readOnly = true) because this is a pure database read operation
     @Override
     @Transactional(readOnly = true)
     public void checkTransactionExists(String rrn, TransactionType type) throws CustomException {
@@ -46,10 +47,10 @@ public class DatabaseServiceImpl implements DatabaseService {
         }
     }
 
+    // Use @Transactional because we want the saveAndFlush operation to happen inside a database transaction
     @Override
     @Transactional
     public void saveInitialCreditTransferEntity(String rrn, TransactionDetails entity) throws CustomException {
-        // Force DB write (using saveAndFlush), since we want to break the thread if exception is thrown
         try {
             transactionDetailsRepository.saveAndFlush(entity);
             log.info("{}: Successfully persisted initial transaction record with RRN: {}", rrn, rrn);
@@ -65,6 +66,7 @@ public class DatabaseServiceImpl implements DatabaseService {
         }
     }
 
+    // Use @Transactional(readOnly = true) because we are fetching a record, no data is modified
     @Override
     @Transactional(readOnly = true)
     public TransactionDetails getSavedRecord(String rrn, TransactionType type) {
@@ -72,14 +74,13 @@ public class DatabaseServiceImpl implements DatabaseService {
         return optionalTransactionDetails.orElse(null);
     }
 
-    // Since we are using a background thread, @Transaction annotation will not apply here.
-    // To keep the Transactional behaviour, we use TransactionTemplate to explicitly:
-    // begin, commit, or rollback a transaction inside the thread
+    // No @Transactional because this method runs inside an async thread (TransactionTemplate manually handles transaction here)
     @Override
     public void updateTransactionRecord(String rrn, TransactionDetails entity) {
         try {
+            // Explicitly manage transaction boundary inside a background thread
             transactionTemplate.executeWithoutResult(status -> {
-                transactionDetailsRepository.save(entity); // this is now inside a transaction
+                transactionDetailsRepository.save(entity);
             });
             log.info("{}: Transaction updated successfully.", rrn);
         } catch (Exception e) {

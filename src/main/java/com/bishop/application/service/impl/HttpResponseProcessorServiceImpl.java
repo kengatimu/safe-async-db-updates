@@ -31,18 +31,25 @@ public class HttpResponseProcessorServiceImpl implements HttpResponseProcessorSe
     @Override
     public TransactionResponse processTransactionResponse(String rrn, CloseableHttpResponse response, TransactionType type) throws CustomException {
         try {
+            // Extract HTTP entity and status details
             HttpEntity entity = response.getEntity();
             int statusCode = response.getStatusLine().getStatusCode();
             String httpStatusMsg = response.getStatusLine().getReasonPhrase();
 
+            // Validate if response entity is empty or status is invalid
             if (entity == null || entity.getContentLength() == 0 || statusCode == 0) {
                 throw new CustomException(TIMEOUT_ERROR);
             }
 
+            // Convert response entity to String
             String responseString = EntityUtils.toString(entity);
+
+            // Log the raw HTTP response
             log.info(String.format(HTTP_RESPONSE_LOG_TEMPLATE, statusCode, httpStatusMsg, responseString));
 
+            // Map response JSON to TransactionResponse object
             return composeResponseObject(responseString);
+
         } catch (CustomException | IOException e) {
             throw new CustomException(DEFAULT_PROCESSING_FAILURE + e.getMessage());
         }

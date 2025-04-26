@@ -17,28 +17,28 @@ import java.util.concurrent.RejectedExecutionException;
 @Configuration
 @EnableAsync
 public class AsyncConfigs implements AsyncConfigurer {
-
     private static final Logger log = LoggerFactory.getLogger(AsyncConfigs.class);
 
+    // Provide a custom ThreadPoolTaskExecutor for @Async methods
     @Override
     @Bean(name = "taskExecutor")
     @Primary
     public TaskExecutor getAsyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
 
-        executor.setCorePoolSize(50); // Number of core threads
-        executor.setMaxPoolSize(150); // Maximum number of threads
-        executor.setQueueCapacity(10000); // Queue capacity
-        executor.setKeepAliveSeconds(60); // Keep alive time for idle threads
-        executor.setThreadNamePrefix("AsyncExecutor-"); // Thread name prefix
+        executor.setCorePoolSize(50); // Number of threads to keep in the pool
+        executor.setMaxPoolSize(150); // Maximum number of allowed threads
+        executor.setQueueCapacity(10000); // Size of the queue before rejecting tasks
+        executor.setKeepAliveSeconds(60); // Time to keep idle threads alive
+        executor.setThreadNamePrefix("AsyncExecutor-"); // Prefix for thread names
 
-        // Custom handler for rejected tasks with logging
+        // Custom handler for rejected tasks
         executor.setRejectedExecutionHandler((r, ex) -> {
             log.error("Task rejected from AsyncExecutor: {}", r.toString());
             throw new RejectedExecutionException("Task rejected due to overload: " + ex);
         });
 
-        // Graceful shutdown
+        // Ensure graceful shutdown
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(60);
 
@@ -46,9 +46,15 @@ public class AsyncConfigs implements AsyncConfigurer {
         return executor;
     }
 
+    // Provide custom exception handling for uncaught async errors
     @Override
     public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {
-        return (throwable, method, params) ->
-                log.error("Uncaught async error in method '{}' with params {}: {}", method.getName(), Arrays.toString(params), throwable.getMessage(), throwable);
+        return (throwable, method, params) -> log.error(
+                "Uncaught async error in method '{}' with params {}: {}",
+                method.getName(),
+                Arrays.toString(params),
+                throwable.getMessage(),
+                throwable
+        );
     }
 }

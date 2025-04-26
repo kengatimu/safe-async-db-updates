@@ -42,23 +42,20 @@ public class RequestProcessorServiceImpl implements RequestProcessorService {
     }
 
     @Override
-    public TransactionResponse processTransactionRequest(TransactionRequest transactionRequest, BindingResult bindingResult, TransactionType type) throws CustomException {
-        String rrn = transactionRequest.getRrn();
-
-        // Validate fields - When you include BindingResult, Spring does not throw the MethodArgumentNotValidException automatically.
-        // We have to check for validation errors manually.
+    public TransactionResponse processTransactionRequest(String rrn, TransactionRequest transactionRequest, BindingResult bindingResult, TransactionType type) throws CustomException {
+        // Validate input fields manually
         checkForInputValidationErrors(bindingResult);
 
-        // Check for duplicates
+        // Check if transaction already exists
         checkTransactionExists(rrn, type);
 
-        // Prepare Initial Db record
+        // Prepare entity to be persisted
         TransactionDetails entity = transactionMapperService.mapRequestToEntity(transactionRequest, type);
 
-        // Save the initial entity
+        // Persist initial transaction record
         persistInitialEntity(entity, rrn);
 
-        // Do http call to the remote service
+        // Send the HTTP request to external service
         return httpAdapterService.sendHttpTransactionRequest(transactionRequest, type);
     }
 
@@ -70,14 +67,16 @@ public class RequestProcessorServiceImpl implements RequestProcessorService {
         throw new CustomException(FIELD_VALIDATION_ERROR + allErrors.get(0).getDefaultMessage());
     }
 
+    // Use @Transactional(readOnly = true) because we are only reading from the database (no modification)
     @Transactional(readOnly = true)
-    private void checkTransactionExists(String rrn, TransactionType type) throws CustomException {
+    public void checkTransactionExists(String rrn, TransactionType type) throws CustomException {
         log.info("{}: Checking transaction by RRN: {} and type: {}", rrn, rrn, type);
         databaseService.checkTransactionExists(rrn, type);
     }
 
+    // Use @Transactional because we are saving a new record to the database
     @Transactional
-    private void persistInitialEntity(TransactionDetails entity, String rrn) throws CustomException {
+    public void persistInitialEntity(TransactionDetails entity, String rrn) throws CustomException {
         try {
             log.info("{}: Saving the initial credit transfer record in the database", rrn);
             databaseService.saveInitialCreditTransferEntity(rrn, entity);

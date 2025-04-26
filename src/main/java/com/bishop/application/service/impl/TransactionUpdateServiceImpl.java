@@ -30,11 +30,14 @@ public class TransactionUpdateServiceImpl implements TransactionUpdateService {
         this.transactionMapperService = transactionMapperService;
     }
 
+    // No @Transactional here because database update runs asynchronously in a separate thread
     @Override
     public void updateDbStatus(String rrn, TransactionResponse channelResponse, TransactionType type) {
         taskExecutor.execute(() -> {
             try {
+                // Compose transaction entity from channel response
                 TransactionDetails entity = transactionMapperService.composeErrorStatusEntity(rrn, channelResponse, type);
+
                 if (entity != null) {
                     log.info("{}: Updating Database Status For Record With RRN: {}", rrn, rrn);
                     databaseService.updateTransactionRecord(rrn, entity);

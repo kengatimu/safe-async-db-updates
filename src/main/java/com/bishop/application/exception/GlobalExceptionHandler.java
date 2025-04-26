@@ -16,8 +16,7 @@ import org.springframework.web.context.request.WebRequest;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.bishop.application.config.ApplicationConstants.DEFAULT_HTTP_STATUS_CODE;
-import static com.bishop.application.config.ApplicationConstants.DEFAULT_PROCESSING_FAILURE;
+import static com.bishop.application.config.ApplicationConstants.*;
 import static com.bishop.application.enums.TransactionStatus.FAILURE;
 import static com.bishop.application.enums.TransactionStatus.TIMEOUT;
 
@@ -40,40 +39,41 @@ public class GlobalExceptionHandler {
         String rrn = (String) request.getAttribute("rrn", WebRequest.SCOPE_REQUEST);
         TransactionType type = (TransactionType) request.getAttribute("type", WebRequest.SCOPE_REQUEST);
 
-        // Parse error code and message from exception
+        // Parse error code and error message from the exception
         Map<String, String> errorMap = getErrorDesc(e.getMessage());
         String errorMessage = errorMap.getOrDefault("message", "An unexpected error occurred");
         String httpStatusCode = errorMap.getOrDefault("code", String.valueOf(DEFAULT_HTTP_STATUS_CODE));
 
+        // Validate HTTP status code (must be between 100-599)
         if ("0".equals(httpStatusCode) || httpStatusCode.isBlank()) {
             httpStatusCode = String.valueOf(DEFAULT_HTTP_STATUS_CODE);
         }
-
-        // Check if the HTTP status code is valid (within range 100-599)
         if (Integer.parseInt(httpStatusCode) < 100 || Integer.parseInt(httpStatusCode) > 599) {
             httpStatusCode = String.valueOf(DEFAULT_HTTP_STATUS_CODE);
         }
 
-        // Construct the response
+        // Generate TransactionResponse object for the failure
         TransactionResponse response = generateResponse(errorMessage, rrn);
 
-        // Update Db status for credit transfer only
+        // Update database asynchronously with failed status
         updateDatabaseRecord(rrn, response, type);
 
+        // Log and return the error response
         log.info("{}: Returned {} Response To Channel: {}", rrn, type, gson.toJson(response));
         return new ResponseEntity<>(response, HttpStatus.valueOf(Integer.parseInt(httpStatusCode)));
     }
 
-    // This will update the database in async (background thread). Therefore, not need for @Transaction annotation
+    // No @Transactional here because database update is handled asynchronously in background thread
     private void updateDatabaseRecord(String rrn, TransactionResponse response, TransactionType type) {
         transactionUpdateService.updateDbStatus(rrn, response, type);
     }
 
+    // Create a failure response based on error type
     private TransactionResponse generateResponse(String errorMessage, String rrn) {
         String errorCode = String.valueOf(FAILURE.getCode());
         String errorStatus = FAILURE.name();
 
-        // Update error code for timeout and authorization
+        // Special handling for timeout errors
         if (errorMessage.contains("timeout")
                 || errorMessage.contains("time out")
                 || errorMessage.contains("timed out")) {
@@ -89,6 +89,7 @@ public class GlobalExceptionHandler {
         return transactionResponse;
     }
 
+    // Parse the error string into a map with code and message parts
     private Map<String, String> getErrorDesc(String errorMessage) {
         Map<String, String> errorMap = new HashMap<>();
 
@@ -96,13 +97,12 @@ public class GlobalExceptionHandler {
             errorMessage = DEFAULT_PROCESSING_FAILURE;
         }
 
-        String[] parts = errorMessage.split("\\|", 2); // Limit to 2 parts
+        String[] parts = errorMessage.split("\\|", 2); // Split into two parts: code and message
 
         if (parts.length == 2) {
             errorMap.put("code", parts[0]);
             errorMap.put("message", parts[1]);
         } else {
-            // Fallback if format is not as expected
             errorMap.put("code", "400");
             errorMap.put("message", "Internal Error: Could not process the request");
         }

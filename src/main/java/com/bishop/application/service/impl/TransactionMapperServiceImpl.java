@@ -46,8 +46,11 @@ public class TransactionMapperServiceImpl implements TransactionMapperService {
 
     @Override
     public TransactionDetails composeErrorStatusEntity(String rrn, TransactionResponse channelResponse, TransactionType type) {
+        // Fetch existing transaction record
         TransactionDetails transactionRecord = databaseService.getSavedRecord(rrn, type);
+
         if (transactionRecord != null) {
+            // Update status fields from the response
             transactionRecord.setStatus(channelResponse.getStatus());
             transactionRecord.setStatusCode(channelResponse.getStatusCode());
             transactionRecord.setStatusDesc(channelResponse.getStatusDesc());
